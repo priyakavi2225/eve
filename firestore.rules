@@ -1,0 +1,134 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global safety net catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- HELPER FUNCTIONS ---
+
+    // Validates a basic ID string (ID Poisoning Guard)
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Helper to extract incoming values
+    function incoming() {
+      return request.resource.data;
+    }
+
+    // Helper to extract existing values
+    function existing() {
+      return resource.data;
+    }
+
+    // Checks if request is authenticated
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Checks ownership of student records
+    function isOwner(studentId) {
+      return isSignedIn() && request.auth.uid == studentId;
+    }
+
+    // Schema Validation for StudentProfile
+    function isValidStudentProfile(data) {
+      return data.keys().hasAll(['uid', 'fullName', 'email', 'currentLevel', 'xp', 'coins', 'gems', 'streak', 'verified', 'unlockedBadges', 'completedLevels'])
+        && data.keys().size() <= 14
+        && data.uid is string && data.uid == request.auth.uid
+        && data.fullName is string && data.fullName.size() <= 100
+        && data.email is string && data.email.size() <= 100
+        && data.email == request.auth.token.email
+        && data.mobileNumber is string && data.mobileNumber.size() <= 20
+        && data.language is string && data.language.size() <= 50
+        && data.studyingFor is string && data.studyingFor.size() <= 50
+        && data.knowledgeLevel is string && data.knowledgeLevel.size() <= 50
+        && data.currentLevel is int && data.currentLevel >= 1 && data.currentLevel <= 100
+        && data.xp is int && data.xp >= 0 && data.xp <= 1000000
+        && data.coins is int && data.coins >= 0 && data.coins <= 1000000
+        && data.gems is int && data.gems >= 0 && data.gems <= 100000
+        && data.streak is int && data.streak >= 0 && data.streak <= 10000
+        && (data.lastActiveDate == null || (data.lastActiveDate is string && data.lastActiveDate.size() <= 15))
+        && data.verified is bool
+        && data.unlockedBadges is list && data.unlockedBadges.size() <= 50
+        && data.completedLevels is list && data.completedLevels.size() <= 150;
+    }
+
+    // Schema Validation for ActivityLog
+    function isValidActivityLog(data) {
+      return data.keys().hasAll(['id', 'title', 'type', 'timestamp', 'xpAwarded'])
+        && data.keys().size() == 5
+        && data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 150
+        && data.type is string && (data.type == 'quiz_complete' || data.type == 'lesson_finish' || data.type == 'badge_earned' || data.type == 'streak_gain')
+        && data.timestamp is string && data.timestamp.size() <= 40
+        && data.xpAwarded is int && data.xpAwarded >= 0 && data.xpAwarded <= 5000;
+    }
+
+    // Schema Validation for LeaderboardEntry
+    function isValidLeaderboardEntry(data) {
+      return data.keys().hasAll(['uid', 'fullName', 'avatar', 'xp', 'level', 'updatedAt'])
+        && data.keys().size() == 6
+        && data.uid is string && data.uid == request.auth.uid
+        && data.fullName is string && data.fullName.size() <= 100
+        && data.avatar is string && data.avatar.size() <= 20
+        && data.xp is int && data.xp >= 0 && data.xp <= 1000000
+        && data.level is int && data.level >= 1 && data.level <= 100
+        && data.updatedAt is string && data.updatedAt.size() <= 40;
+    }
+
+    // --- ROUTE MATCHING RULES ---
+
+    // Collection: students/
+    match /students/{studentId} {
+      allow get: if isOwner(studentId);
+      allow list: if isOwner(studentId);
+
+      allow create: if isOwner(studentId) 
+        && isValidId(studentId)
+        && isValidStudentProfile(incoming());
+
+      allow update: if isOwner(studentId)
+        && isValidId(studentId)
+        && isValidStudentProfile(incoming())
+        && incoming().uid == existing().uid
+        && incoming().email == existing().email;
+
+      allow delete: if false; // Student profiles are permanent/immortal
+
+      // Subcollection: logs/
+      match /logs/{logId} {
+        allow get, list: if isOwner(studentId);
+
+        allow create: if isOwner(studentId)
+          && isValidId(logId)
+          && isValidActivityLog(incoming())
+          && incoming().id == logId;
+
+        allow update: if false; // Logs are immutable audit trails
+        allow delete: if false; // Logs cannot be removed by client
+      }
+    }
+
+    // Collection: leaderboard/
+    match /leaderboard/{studentId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+
+      allow create: if isOwner(studentId)
+        && isValidId(studentId)
+        && isValidLeaderboardEntry(incoming());
+
+      allow update: if isOwner(studentId)
+        && isValidId(studentId)
+        && isValidLeaderboardEntry(incoming())
+        && incoming().uid == existing().uid;
+
+      allow delete: if false; // High score entries cannot be removed
+    }
+
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "entities": {
+    "StudentProfile": {
+      "title": "StudentProfile",
+      "description": "The cognitive learning profile of a student using Stitch AI.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "fullName": { "type": "string" },
+        "email": { "type": "string" },
+        "mobileNumber": { "type": "string" },
+        "language": { "type": "string" },
+        "studyingFor": { "type": "string" },
+        "knowledgeLevel": { "type": "string" },
+        "currentLevel": { "type": "integer" },
+        "xp": { "type": "integer" },
+        "coins": { "type": "integer" },
+        "gems": { "type": "integer" },
+        "streak": { "type": "integer" },
+        "lastActiveDate": { "type": "string" },
+        "verified": { "type": "boolean" },
+        "unlockedBadges": { "type": "array" },
+        "completedLevels": { "type": "array" }
+      },
+      "required": ["uid", "fullName", "email", "currentLevel", "xp", "coins", "gems", "streak"]
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "An action log documenting a learning milestone achieved by the student.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "type": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "xpAwarded": { "type": "integer" }
+      },
+      "required": ["id", "title", "type", "timestamp", "xpAwarded"]
+    },
+    "LeaderboardEntry": {
+      "title": "LeaderboardEntry",
+      "description": "Public high score metrics for a student on the community board.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "fullName": { "type": "string" },
+        "avatar": { "type": "string" },
+        "xp": { "type": "integer" },
+        "level": { "type": "integer" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "fullName", "avatar", "xp", "level", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "students/{studentId}": {
+      "schema": "StudentProfile",
+      "description": "Collection of student profiles, keyed by Uid."
+    },
+    "students/{studentId}/logs/{logId}": {
+      "schema": "ActivityLog",
+      "description": "Subcollection of activity logs for milestones, keyed by Log ID."
+    },
+    "leaderboard/{studentId}": {
+      "schema": "LeaderboardEntry",
+      "description": "Rank and score snapshots uploaded by students, keyed by Student Uid."
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Stitch AI",
+  "description": "A vibrant, gamified education app featuring an interactive Candy Crush-style roadmap, friendly AI tutor, quizzes, and rewards dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
